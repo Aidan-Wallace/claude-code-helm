@@ -1,4 +1,29 @@
-FROM ubuntu:24.04
+ARG CONTAINER_VARIANT=6.1.7-noble
+
+FROM mcr.microsoft.com/devcontainers/universal:${CONTAINER_VARIANT}
+
+USER root
+
+RUN sudo apt-get update && sudo apt-get install -y \
+    openssh-server sudo curl git vim tmux ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /var/run/sshd
+
+# devcontainers/universal already has a non-root "codespace" user;
+# reuse it instead of creating a new one
+RUN mkdir -p /home/codespace/.ssh \
+    && chmod 700 /home/codespace/.ssh \
+    && chown -R codespace:codespace /home/codespace/.ssh
+
+# sshd config: key-only auth, no root login
+RUN sed -i \
+    -e 's/#PermitRootLogin.*/PermitRootLogin no/' \
+    -e 's/#PasswordAuthentication.*/PasswordAuthentication no/' \
+    -e 's/#PubkeyAuthentication.*/PubkeyAuthentication yes/' \
+    /etc/ssh/sshd_config
+
+USER codespace
 
 ARG CLAUDE_CODE_VERSION=latest
 ARG NODE_MAJOR=26
@@ -38,7 +63,7 @@ RUN ARCH="$(dpkg --print-architecture)" \
     && tar -C /usr/local -xzf /tmp/go.tar.gz \
     && rm /tmp/go.tar.gz
 
-ENV HOME=/home/ubuntu
+ENV HOME=/home/codespace
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONUNBUFFERED=1 \
     GOPATH=$HOME/go \
@@ -54,7 +79,11 @@ RUN mkdir -p /opt/claude \
     && ln -s /opt/claude/.local/bin/claude /usr/local/bin/claude \
     && chmod -R a+rX /opt/claude
 
-WORKDIR /home/ubuntu
-USER ubuntu
+# WORKDIR /home/codespace
+# USER codespace
 
-CMD ["bash"]
+# CMD ["bash"]
+
+USER root
+EXPOSE 22
+CMD ["/usr/sbin/sshd", "-D"]

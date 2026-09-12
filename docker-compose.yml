@@ -1,0 +1,5 @@
+services:
+  app:
+    image: claude-code:latest
+    build: .
+    platform: linux/amd64
