@@ -26,8 +26,6 @@ RUN sed -i \
     /etc/ssh/sshd_config
 
 ARG CLAUDE_CODE_VERSION=latest
-ARG NODE_MAJOR=26
-ARG GO_VERSION=1.25.10
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -52,21 +50,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zsh \
     && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /etc/apt/keyrings \
-    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
-    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" > /etc/apt/sources.list.d/nodesource.list \
-    && apt-get update && apt-get install -y --no-install-recommends nodejs \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN ARCH="$(dpkg --print-architecture)" \
-    && curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${ARCH}.tar.gz" -o /tmp/go.tar.gz \
-    && tar -C /usr/local -xzf /tmp/go.tar.gz \
-    && rm /tmp/go.tar.gz
-
 # Non-interactive ssh sessions (ssh host 'cmd', used by most remote tooling/agents)
-# don't source shell profiles, so they get sshd/PAM's minimal default PATH. Add Go
-# there directly so it's reachable either way.
-RUN sed -i 's#^PATH="#PATH="/usr/local/go/bin:#' /etc/environment
+# don't source shell profiles, so they get sshd/PAM's minimal default PATH and miss
+# the base image's version-managed toolchains (Go, nvm's Node). Add them directly
+# so they're reachable either way.
+RUN sed -i 's#^PATH="#PATH="/home/codespace/nvm/current/bin:/usr/local/go/bin:#' /etc/environment
 
 ENV HOME=/home/codespace
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
