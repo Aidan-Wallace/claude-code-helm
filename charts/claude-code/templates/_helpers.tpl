@@ -78,3 +78,14 @@ Create the name of the PVC
 {{- define "claude-code.pvcName" -}}
 {{- include "claude-code.fullname" . }}
 {{- end }}
+
+{{/*
+Create the name of the secret to use for SSH authorized_keys
+*/}}
+{{- define "claude-code.sshSecretName" -}}
+{{- if .Values.ssh.existingSecret }}
+{{- .Values.ssh.existingSecret }}
+{{- else }}
+{{- printf "%s-ssh-keys" (include "claude-code.fullname" .) }}
+{{- end }}
+{{- end }}

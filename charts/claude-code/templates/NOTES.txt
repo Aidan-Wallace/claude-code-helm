@@ -12,4 +12,14 @@ Run Claude Code:
 
   claude
 
-The pod mounts /home/node from a PVC by default, so login state and ~/.claude persist across pod restarts.
+The pod mounts {{ .Values.home }} from a PVC by default, so login state and ~/.claude persist across pod restarts.
+{{- if .Values.ssh.enabled }}
+
+SSH is enabled. Find the service address:
+
+  kubectl get svc --namespace {{ .Release.Namespace }} {{ include "claude-code.fullname" . }}
+
+Then connect with a key matching one of ssh.publicKeys:
+
+  ssh codespace@<service-address>
+{{- end }}
