@@ -37,6 +37,38 @@ env: {}
 #   TZ: UTC
 #   NODE_ENV: production
 
+externalSecrets:
+  # -- Render ExternalSecret resources
+  enabled: false
+  # -- Default refresh interval for ExternalSecret resources
+  refreshInterval: 1h
+  # -- ExternalSecret definitions with complete spec blocks
+  items: []
+    # - fullnameOverride: ssh-keys
+    #   spec:
+    #     secretStoreRef:
+    #       name: bitwarden-secretsmanager
+    #       kind: ClusterSecretStore
+    #     data:
+    #       - secretKey: authorized_keys
+    #         remoteRef:
+    #           key: ssh-keys
+    #           conversionStrategy: Default
+    #           decodingStrategy: None
+    #           metadataPolicy: None
+    # - fullnameOverride: anthropic-api-key
+    #   spec:
+    #     secretStoreRef:
+    #       name: bitwarden-secretsmanager
+    #       kind: ClusterSecretStore
+    #     data:
+    #       - secretKey: anthropic_api_key
+    #         remoteRef:
+    #           key: anthropic-api-key
+    #           conversionStrategy: Default
+    #           decodingStrategy: None
+    #           metadataPolicy: None
+
 # SSH access, off by default. Enabling this switches the container to run
 # sshd as root instead of the idle process, since sshd needs root to bind
 # port 22 and drop privileges per login.
