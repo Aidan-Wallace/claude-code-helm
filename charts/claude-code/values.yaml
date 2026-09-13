@@ -91,6 +91,21 @@ service:
   # -- Restrict which source IPs can reach the LoadBalancer
   loadBalancerSourceRanges: []
 
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: claude-code.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+    # - secretName: claude-code-tls
+    #   hosts:
+    #     - claude-code.local
+
 # Credentials and secret wiring
 credentials:
   # -- Use an existing secret instead of creating one
