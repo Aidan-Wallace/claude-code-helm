@@ -103,7 +103,7 @@ dockerInDocker:
   enabled: false
   image:
     repository: docker
-    tag: "27-dind"
+    tag: "29-dind"
   resources:
     requests:
       cpu: 250m
