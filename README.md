@@ -127,6 +127,22 @@ The sidecar runs `privileged: true`, which is required for nested Docker but is 
 
 ---
 
+## Additional Manifests
+
+`additionalManifests` takes a list of complete Kubernetes manifests to create alongside the release — useful for things this chart doesn't model directly (an `IngressRouteTCP`, a `NetworkPolicy`, an extra `ConfigMap`, etc). Each entry is rendered through `tpl`, so it can reference chart values and helpers:
+
+```yaml
+additionalManifests:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: "{{ include \"claude-code.fullname\" $ }}-extra"
+    data:
+      hello: world
+```
+
+---
+
 ## Image Publishing
 
 This repository includes a multi-arch image workflow at [`.github/workflows/build-image.yaml`](.github/workflows/build-image.yaml).

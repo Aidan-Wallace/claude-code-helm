@@ -197,3 +197,16 @@ podAnnotations: {}
 
 # -- Labels for the pod
 podLabels: {}
+
+# -- Additional Kubernetes resources to create alongside this release. Each
+# entry is a complete manifest (apiVersion/kind/metadata/...) and supports
+# templating (e.g. {{ include "claude-code.fullname" $ }}).
+additionalManifests: []
+# Example:
+# additionalManifests:
+#   - apiVersion: v1
+#     kind: ConfigMap
+#     metadata:
+#       name: my-extra-configmap
+#     data:
+#       key: value
