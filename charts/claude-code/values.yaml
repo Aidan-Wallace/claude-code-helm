@@ -62,7 +62,7 @@ externalSecrets:
     #       name: bitwarden-secretsmanager
     #       kind: ClusterSecretStore
     #     data:
-    #       - secretKey: anthropic_api_key
+    #       - secretKey: ANTHROPIC_API_KEY
     #         remoteRef:
     #           key: anthropic-api-key
     #           conversionStrategy: Default
