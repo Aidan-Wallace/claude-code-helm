@@ -15,6 +15,9 @@ spec:
   loadBalancerSourceRanges:
     {{- toYaml . | nindent 4 }}
   {{- end }}
+  {{- with .Values.service.loadBalancerIP }}
+  loadBalancerIP: {{ . }}
+  {{- end }}
   selector:
     {{- include "claude-code.selectorLabels" . | nindent 4 }}
   ports:
