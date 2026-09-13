@@ -16,14 +16,14 @@ RUN mkdir -p /home/codespace/.ssh \
     && chmod 700 /home/codespace/.ssh \
     && chown -R codespace:codespace /home/codespace/.ssh
 
-# sshd config: key-only auth, no root login
+# sshd config: key-only auth, no root login, standard port (base image
+# defaults to 2222 for Codespaces port-forwarding, which doesn't apply here)
 RUN sed -i \
     -e 's/#PermitRootLogin.*/PermitRootLogin no/' \
     -e 's/#PasswordAuthentication.*/PasswordAuthentication no/' \
     -e 's/#PubkeyAuthentication.*/PubkeyAuthentication yes/' \
+    -e 's/^Port .*/Port 22/' \
     /etc/ssh/sshd_config
-
-USER codespace
 
 ARG CLAUDE_CODE_VERSION=latest
 ARG NODE_MAJOR=26
@@ -62,6 +62,11 @@ RUN ARCH="$(dpkg --print-architecture)" \
     && curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${ARCH}.tar.gz" -o /tmp/go.tar.gz \
     && tar -C /usr/local -xzf /tmp/go.tar.gz \
     && rm /tmp/go.tar.gz
+
+# Non-interactive ssh sessions (ssh host 'cmd', used by most remote tooling/agents)
+# don't source shell profiles, so they get sshd/PAM's minimal default PATH. Add Go
+# there directly so it's reachable either way.
+RUN sed -i 's#^PATH="#PATH="/usr/local/go/bin:#' /etc/environment
 
 ENV HOME=/home/codespace
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
