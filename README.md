@@ -15,7 +15,7 @@ A Helm chart for running [Claude Code CLI](https://github.com/anthropics/claude-
 For an in-depth installation walkthrough, see the [Claude Code on Kubernetes blog post](https://metoro.io/blog/claude-code-kubernetes).
 
 ```bash
-helm repo add claude-code https://setheck.github.io/claude-code-helm
+helm repo add claude-code https://aidan-wallace.github.io/claude-code-helm
 helm repo update
 helm install claude claude-code/claude-code
 ```
@@ -36,7 +36,7 @@ claude
 - Helm 3.0+
 - Docker (if you want to build/publish your own image)
 
-> The chart does not install Claude Code at startup. It expects `image.repository:image.tag` to be ready-to-run (defaults to `ghcr.io/setheck/claude-code:2.1.37`).
+> The chart does not install Claude Code at startup. It expects `image.repository:image.tag` to be ready-to-run (defaults to `ghcr.io/aidan-wallace/claude-code:2.1.37`).
 
 ---
 
@@ -132,12 +132,12 @@ The sidecar runs `privileged: true`, which is required for nested Docker but is 
 This repository includes a multi-arch image workflow at [`.github/workflows/build-image.yaml`](.github/workflows/build-image.yaml).
 
 - Push to `main` publishes:
-  - `ghcr.io/setheck/claude-code:latest`
-  - `ghcr.io/setheck/claude-code:sha-<shortsha>`
+  - `ghcr.io/aidan-wallace/claude-code:latest`
+  - `ghcr.io/aidan-wallace/claude-code:sha-<shortsha>`
 - Push a tag named `claude-X.Y.Z` publishes:
-  - `ghcr.io/setheck/claude-code:X.Y.Z`
-  - `ghcr.io/setheck/claude-code:latest`
-- Images are built for both `linux/amd64` and `linux/arm64`.
+  - `ghcr.io/aidan-wallace/claude-code:X.Y.Z`
+  - `ghcr.io/aidan-wallace/claude-code:latest`
+- Images are built for `linux/amd64`
 
 Claude Code version baked into the image is controlled by the workflow and installed via the official native installer (`https://claude.ai/install.sh`):
 
@@ -150,21 +150,21 @@ For reproducibility, Helm defaults should point to explicit version tags rather 
 
 ## Key Values
 
-| Parameter                    | Description                                         | Default        |
-| ---------------------------- | --------------------------------------------------- | -------------- |
-| `image.repository`           | Prebuilt image containing `claude`                 | `ghcr.io/setheck/claude-code` |
-| `image.tag`                  | Image tag                                           | `2.1.37`       |
-| `command`                    | Container command (idle by default)                 | `sh -lc sleep infinity` |
-| `credentials.existingSecret` | Existing secret for env vars                        | `""`           |
-| `credentials.anthropicApiKey`| API key for chart-managed secret                    | `""`           |
-| `credentials.secretData`     | Extra chart-managed secret key/value pairs          | `{}`           |
-| `persistence.enabled`        | Persist `/home/codespace`                           | `true`         |
-| `persistence.size`           | PVC size                                            | `5Gi`          |
-| `persistence.existingClaim`  | Use existing PVC instead of creating one            | `""`           |
-| `ssh.enabled`                 | Run sshd and expose port 22                         | `false`        |
-| `ssh.publicKeys`              | Authorized keys                                     | `[]`           |
-| `service.type`                | Service type for SSH                                | `LoadBalancer` |
-| `dockerInDocker.enabled`      | Run an isolated dockerd sidecar                     | `false`        |
+| Parameter                     | Description                                | Default                             |
+| ----------------------------- | ------------------------------------------ | ----------------------------------- |
+| `image.repository`            | Prebuilt image containing `claude`         | `ghcr.io/aidan-wallace/claude-code` |
+| `image.tag`                   | Image tag                                  | `2.1.37`                            |
+| `command`                     | Container command (idle by default)        | `sh -lc sleep infinity`             |
+| `credentials.existingSecret`  | Existing secret for env vars               | `""`                                |
+| `credentials.anthropicApiKey` | API key for chart-managed secret           | `""`                                |
+| `credentials.secretData`      | Extra chart-managed secret key/value pairs | `{}`                                |
+| `persistence.enabled`         | Persist `/home/codespace`                  | `true`                              |
+| `persistence.size`            | PVC size                                   | `5Gi`                               |
+| `persistence.existingClaim`   | Use existing PVC instead of creating one   | `""`                                |
+| `ssh.enabled`                 | Run sshd and expose port 22                | `false`                             |
+| `ssh.publicKeys`              | Authorized keys                            | `[]`                                |
+| `service.type`                | Service type for SSH                       | `LoadBalancer`                      |
+| `dockerInDocker.enabled`      | Run an isolated dockerd sidecar            | `false`                             |
 
 See [`charts/claude-code/values.yaml`](charts/claude-code/values.yaml) for the full configuration.
 
