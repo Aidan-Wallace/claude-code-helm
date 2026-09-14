@@ -51,11 +51,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           stdin: {{ .Values.stdin }}
           tty: {{ .Values.tty }}
-          {{- if .Values.ssh.enabled }}
-          command:
-            - /usr/sbin/sshd
-            - -D
-          {{- else }}
+          {{- if not .Values.ssh.enabled }}
           {{- with .Values.command }}
           command:
             {{- toYaml . | nindent 12 }}

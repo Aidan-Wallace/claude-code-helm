@@ -5,7 +5,7 @@ FROM mcr.microsoft.com/devcontainers/universal:${CONTAINER_VARIANT}
 USER root
 
 RUN sudo apt-get update && sudo apt-get install -y \
-    openssh-server sudo curl git vim tmux ca-certificates \
+    openssh-server sudo curl git vim tmux ca-certificates supervisor \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /var/run/sshd
@@ -16,13 +16,19 @@ RUN mkdir -p /home/codespace/.ssh \
     && chmod 700 /home/codespace/.ssh \
     && chown -R codespace:codespace /home/codespace/.ssh
 
+# snapshot the base image's home dir (oh-my-zsh, dotfiles, ...) before a PVC
+# ever gets mounted over it - entrypoint.sh reseeds from this on first boot
+RUN cp -a /home/codespace /opt/skel-codespace
+
 # sshd config: key-only auth, no root login, standard port (base image
-# defaults to 2222 for Codespaces port-forwarding, which doesn't apply here)
+# defaults to 2222 for Codespaces port-forwarding, which doesn't apply here),
+# verbose logging so auth attempts show up in `kubectl logs`
 RUN sed -i \
     -e 's/#PermitRootLogin.*/PermitRootLogin no/' \
     -e 's/#PasswordAuthentication.*/PasswordAuthentication no/' \
     -e 's/#PubkeyAuthentication.*/PubkeyAuthentication yes/' \
     -e 's/^Port .*/Port 22/' \
+    -e 's/#LogLevel.*/LogLevel VERBOSE/' \
     /etc/ssh/sshd_config
 
 ARG CLAUDE_CODE_VERSION=latest
@@ -77,6 +83,11 @@ RUN mkdir -p /opt/claude \
 
 # CMD ["bash"]
 
+COPY docker/sshd.supervisor.conf /etc/supervisor/conf.d/sshd.conf
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 USER root
 EXPOSE 22
-CMD ["/usr/sbin/sshd", "-D"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/supervisord.conf"]
