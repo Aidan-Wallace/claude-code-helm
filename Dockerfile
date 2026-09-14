@@ -1,11 +1,37 @@
 ARG CONTAINER_VARIANT=6.1.7-noble
+ARG CLAUDE_CODE_VERSION=latest
 
 FROM mcr.microsoft.com/devcontainers/universal:${CONTAINER_VARIANT}
 
 USER root
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 RUN sudo apt-get update && sudo apt-get install -y \
-    openssh-server sudo curl git vim tmux ca-certificates supervisor \
+    bash \
+    build-essential \
+    ca-certificates \
+    curl \
+    fzf \
+    gh \
+    git \
+    git \
+    gnupg \
+    jq \
+    less \
+    openssh-client \
+    openssh-server \
+    procps \
+    python3 \
+    python3-pip \
+    python3-venv \
+    ripgrep \
+    sudo \
+    supervisor \
+    tmux \
+    unzip \
+    vim \
+    zsh \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /var/run/sshd
@@ -21,8 +47,7 @@ RUN mkdir -p /home/codespace/.ssh \
 RUN cp -a /home/codespace /opt/skel-codespace
 
 # sshd config: key-only auth, no root login, standard port (base image
-# defaults to 2222 for Codespaces port-forwarding, which doesn't apply here),
-# verbose logging so auth attempts show up in `kubectl logs`
+# defaults to 2222 for Codespaces port-forwarding, which doesn't apply here)
 RUN sed -i \
     -e 's/#PermitRootLogin.*/PermitRootLogin no/' \
     -e 's/#PasswordAuthentication.*/PasswordAuthentication no/' \
@@ -30,31 +55,6 @@ RUN sed -i \
     -e 's/^Port .*/Port 22/' \
     -e 's/#LogLevel.*/LogLevel VERBOSE/' \
     /etc/ssh/sshd_config
-
-ARG CLAUDE_CODE_VERSION=latest
-
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash \
-    build-essential \
-    ca-certificates \
-    curl \
-    fzf \
-    gh \
-    git \
-    gnupg \
-    jq \
-    less \
-    openssh-client \
-    procps \
-    python3 \
-    python3-pip \
-    python3-venv \
-    ripgrep \
-    unzip \
-    zsh \
-    && rm -rf /var/lib/apt/lists/*
 
 # Non-interactive ssh sessions (ssh host 'cmd', used by most remote tooling/agents)
 # don't source shell profiles, so they get sshd/PAM's minimal default PATH and miss
@@ -77,11 +77,6 @@ RUN mkdir -p /opt/claude \
     && curl -fsSL https://claude.ai/install.sh | bash -s "${CLAUDE_CODE_VERSION}" \
     && ln -s /opt/claude/.local/bin/claude /usr/local/bin/claude \
     && chmod -R a+rX /opt/claude
-
-# WORKDIR /home/codespace
-# USER codespace
-
-# CMD ["bash"]
 
 COPY docker/sshd.supervisor.conf /etc/supervisor/conf.d/sshd.conf
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
