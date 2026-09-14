@@ -7,14 +7,13 @@ USER root
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN sudo apt-get update && sudo apt-get install -y \
+RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
     bash \
     build-essential \
     ca-certificates \
     curl \
     fzf \
     gh \
-    git \
     git \
     gnupg \
     jq \
@@ -36,18 +35,13 @@ RUN sudo apt-get update && sudo apt-get install -y \
 
 RUN mkdir -p /var/run/sshd
 
-# devcontainers/universal already has a non-root "codespace" user;
-# reuse it instead of creating a new one
 RUN mkdir -p /home/codespace/.ssh \
     && chmod 700 /home/codespace/.ssh \
     && chown -R codespace:codespace /home/codespace/.ssh
 
-# snapshot the base image's home dir (oh-my-zsh, dotfiles, ...) before a PVC
 # ever gets mounted over it - entrypoint.sh reseeds from this on first boot
 RUN cp -a /home/codespace /opt/skel-codespace
 
-# sshd config: key-only auth, no root login, standard port (base image
-# defaults to 2222 for Codespaces port-forwarding, which doesn't apply here)
 RUN sed -i \
     -e 's/#PermitRootLogin.*/PermitRootLogin no/' \
     -e 's/#PasswordAuthentication.*/PasswordAuthentication no/' \
@@ -56,10 +50,6 @@ RUN sed -i \
     -e 's/#LogLevel.*/LogLevel VERBOSE/' \
     /etc/ssh/sshd_config
 
-# Non-interactive ssh sessions (ssh host 'cmd', used by most remote tooling/agents)
-# don't source shell profiles, so they get sshd/PAM's minimal default PATH and miss
-# the base image's version-managed toolchains (Go, nvm's Node). Add them directly
-# so they're reachable either way.
 RUN sed -i 's#^PATH="#PATH="/home/codespace/nvm/current/bin:/usr/local/go/bin:#' /etc/environment
 
 ENV HOME=/home/codespace
