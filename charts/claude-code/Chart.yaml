@@ -2,7 +2,7 @@ apiVersion: v2
 name: claude-code
 description: A Helm chart for running Claude Code CLI in Kubernetes with persistent HOME storage
 type: application
-version: 0.0.4
+version: 0.0.5
 appVersion: "2.1.139"
 keywords:
   - claude
