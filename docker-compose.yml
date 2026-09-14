@@ -1,0 +1,19 @@
+services:
+  app:
+    image: claude-code:latest
+    build: .
+    platform: linux/amd64
+    environment:
+      DOCKER_HOST: tcp://dind:2375
+    depends_on:
+      - dind
+
+  dind:
+    image: docker:29-dind
+    privileged: true
+    command: ["dockerd", "--host=tcp://0.0.0.0:2375", "--tls=false"]
+    volumes:
+      - docker-lib:/var/lib/docker
+
+volumes:
+  docker-lib:

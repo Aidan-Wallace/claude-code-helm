@@ -5,10 +5,14 @@ nameOverride: ""
 # -- Override the full name of the release
 fullnameOverride: ""
 
+# -- Override the pod's hostname (what `hostname` reports inside the
+# container, e.g. in the shell prompt). Defaults to the pod's generated name.
+hostnameOverride: ""
+
 # Image configuration
 image:
   # -- Container image repository. This image must already contain the `claude` binary.
-  repository: ghcr.io/setheck/claude-code
+  repository: ghcr.io/aidan-wallace/claude-code
   # -- Container image tag. Pin this to an explicit Claude Code version tag.
   tag: "2.1.139"
   # -- Image pull policy
@@ -28,7 +32,7 @@ command:
 extraArgs: []
 
 # -- Home directory for the container user; used for the HOME env var and the persistent volume mount
-home: /home/ubuntu
+home: /home/codespace
 
 # -- Non-secret environment variables
 env: {}
@@ -36,6 +40,61 @@ env: {}
 # env:
 #   TZ: UTC
 #   NODE_ENV: production
+
+externalSecrets:
+  # -- Render ExternalSecret resources
+  enabled: false
+  # -- Default refresh interval for ExternalSecret resources
+  refreshInterval: 1h
+  # -- ExternalSecret definitions with complete spec blocks
+  items: []
+    # - fullnameOverride: ssh-keys
+    #   spec:
+    #     secretStoreRef:
+    #       name: bitwarden-secretsmanager
+    #       kind: ClusterSecretStore
+    #     data:
+    #       - secretKey: authorized_keys
+    #         remoteRef:
+    #           key: ssh-keys
+    #           conversionStrategy: Default
+    #           decodingStrategy: None
+    #           metadataPolicy: None
+    # - fullnameOverride: anthropic-api-key
+    #   spec:
+    #     secretStoreRef:
+    #       name: bitwarden-secretsmanager
+    #       kind: ClusterSecretStore
+    #     data:
+    #       - secretKey: ANTHROPIC_API_KEY
+    #         remoteRef:
+    #           key: anthropic-api-key
+    #           conversionStrategy: Default
+    #           decodingStrategy: None
+    #           metadataPolicy: None
+
+# SSH access, off by default. Enabling this switches the container to run
+# sshd as root instead of the idle process, since sshd needs root to bind
+# port 22 and drop privileges per login.
+ssh:
+  # -- Run sshd and expose port 22 instead of the default idle command
+  enabled: false
+  # -- Authorized public keys, one per entry (e.g. "ssh-ed25519 AAAA... me@laptop")
+  publicKeys: []
+  # -- Use an existing secret (must have an "authorized_keys" key) instead of publicKeys
+  existingSecret: ""
+
+# Service for SSH access. Only created when ssh.enabled is true.
+service:
+  # -- Service type, e.g. LoadBalancer or NodePort
+  type: LoadBalancer
+  # -- Port to expose
+  port: 22
+  # -- Annotations for the service
+  annotations: {}
+  # -- Restrict which source IPs can reach the LoadBalancer
+  loadBalancerSourceRanges: []
+  loadBalancerIP: ""
 
 # Credentials and secret wiring
 credentials:
@@ -67,11 +126,31 @@ persistence:
 # Resource requests and limits for the Claude container
 resources:
   requests:
-    cpu: 100m
-    memory: 256Mi
+    cpu: 250m
+    memory: 512Mi
   limits:
-    cpu: 2000m
-    memory: 2Gi
+    cpu: 4000m
+    memory: 8Gi
+
+# Docker-in-Docker sidecar, off by default. Runs an isolated dockerd in the
+# pod (its own storage, not the host's) so tools/agents can build and run
+# containers. Requires a privileged sidecar container - see README.
+dockerInDocker:
+  # -- Run a docker:dind sidecar alongside the main container
+  enabled: false
+  image:
+    repository: docker
+    tag: "29-dind"
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  storage:
+    # -- Size limit for the sidecar's /var/lib/docker (emptyDir, not persisted across restarts)
+    sizeLimit: 20Gi
 
 # Security context for the pod
 podSecurityContext:
@@ -123,3 +202,16 @@ podAnnotations: {}
 
 # -- Labels for the pod
 podLabels: {}
+
+# -- Additional Kubernetes resources to create alongside this release. Each
+# entry is a complete manifest (apiVersion/kind/metadata/...) and supports
+# templating (e.g. {{ include "claude-code.fullname" $ }}).
+additionalManifests: []
+# Example:
+# additionalManifests:
+#   - apiVersion: v1
+#     kind: ConfigMap
+#     metadata:
+#       name: my-extra-configmap
+#     data:
+#       key: value

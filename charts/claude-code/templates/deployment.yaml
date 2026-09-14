@@ -1,5 +1,8 @@
 {{- $hasManagedSecret := and (not .Values.credentials.existingSecret) (or .Values.credentials.anthropicApiKey (not (empty .Values.credentials.secretData))) -}}
 {{- $hasAnySecret := or .Values.credentials.existingSecret $hasManagedSecret -}}
+{{- if and .Values.ssh.enabled (not .Values.ssh.existingSecret) (not .Values.ssh.publicKeys) -}}
+{{- fail "ssh.enabled requires ssh.publicKeys or ssh.existingSecret" -}}
+{{- end -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -35,25 +38,45 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "claude-code.serviceAccountName" . }}
+      {{- with .Values.hostnameOverride }}
+      hostname: {{ . }}
+      {{- end }}
       securityContext:
+        {{- if .Values.ssh.enabled }}
+        seccompProfile:
+          type: RuntimeDefault
+        {{- else }}
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        {{- end }}
       containers:
         - name: claude
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           stdin: {{ .Values.stdin }}
           tty: {{ .Values.tty }}
+          {{- if not .Values.ssh.enabled }}
           {{- with .Values.command }}
           command:
             {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- end }}
           {{- with .Values.extraArgs }}
           args:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- if .Values.ssh.enabled }}
+          ports:
+            - name: ssh
+              containerPort: 22
+              protocol: TCP
+          {{- end }}
           env:
             - name: HOME
               value: {{ .Values.home | quote }}
+            {{- if .Values.dockerInDocker.enabled }}
+            - name: DOCKER_HOST
+              value: tcp://localhost:2375
+            {{- end }}
             {{- range $name, $value := .Values.env }}
             - name: {{ $name }}
               value: {{ $value | quote }}
@@ -66,10 +89,38 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           securityContext:
+            {{- if .Values.ssh.enabled }}
+            runAsUser: 0
+            allowPrivilegeEscalation: true
+            seccompProfile:
+              type: RuntimeDefault
+            {{- else }}
             {{- toYaml .Values.securityContext | nindent 12 }}
+            {{- end }}
           volumeMounts:
             - name: home
               mountPath: {{ .Values.home | quote }}
+            {{- if .Values.ssh.enabled }}
+            - name: ssh-keys
+              mountPath: {{ .Values.home }}/.ssh/authorized_keys
+              subPath: authorized_keys
+              readOnly: true
+            {{- end }}
+        {{- if .Values.dockerInDocker.enabled }}
+        - name: dind
+          image: "{{ .Values.dockerInDocker.image.repository }}:{{ .Values.dockerInDocker.image.tag }}"
+          args:
+            - dockerd
+            - --host=tcp://0.0.0.0:2375
+            - --tls=false
+          securityContext:
+            privileged: true
+          resources:
+            {{- toYaml .Values.dockerInDocker.resources | nindent 12 }}
+          volumeMounts:
+            - name: docker-lib
+              mountPath: /var/lib/docker
+        {{- end }}
       volumes:
         - name: home
           {{- if .Values.persistence.enabled }}
@@ -78,6 +129,19 @@ spec:
           {{- else }}
           emptyDir: {}
           {{- end }}
+        {{- if .Values.ssh.enabled }}
+        - name: ssh-keys
+          secret:
+            secretName: {{ include "claude-code.sshSecretName" . }}
+            # secret volumes mount as root; 0444 lets sshd read it after
+            # dropping privileges to the target user (0400 leaves it root-only)
+            defaultMode: 0444
+        {{- end }}
+        {{- if .Values.dockerInDocker.enabled }}
+        - name: docker-lib
+          emptyDir:
+            sizeLimit: {{ .Values.dockerInDocker.storage.sizeLimit }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

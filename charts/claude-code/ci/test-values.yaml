@@ -14,6 +14,14 @@ persistence:
   enabled: true
   size: 1Gi
 
+ssh:
+  enabled: true
+  publicKeys:
+    - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDummyKeyForCiLintOnly test@ci"
+
+dockerInDocker:
+  enabled: true
+
 resources:
   requests:
     cpu: 50m

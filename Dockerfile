@@ -1,12 +1,13 @@
-FROM ubuntu:24.04
-
+ARG CONTAINER_VARIANT=6.1.7-noble
 ARG CLAUDE_CODE_VERSION=latest
-ARG NODE_MAJOR=26
-ARG GO_VERSION=1.25.10
+
+FROM mcr.microsoft.com/devcontainers/universal:${CONTAINER_VARIANT}
+
+USER root
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN sudo apt-get update && sudo apt-get install -y --no-install-recommends \
     bash \
     build-essential \
     ca-certificates \
@@ -18,27 +19,40 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     less \
     openssh-client \
+    openssh-server \
     procps \
     python3 \
     python3-pip \
     python3-venv \
     ripgrep \
+    sudo \
+    supervisor \
+    tmux \
     unzip \
+    vim \
     zsh \
     && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /etc/apt/keyrings \
-    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
-    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main" > /etc/apt/sources.list.d/nodesource.list \
-    && apt-get update && apt-get install -y --no-install-recommends nodejs \
-    && rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /var/run/sshd
 
-RUN ARCH="$(dpkg --print-architecture)" \
-    && curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${ARCH}.tar.gz" -o /tmp/go.tar.gz \
-    && tar -C /usr/local -xzf /tmp/go.tar.gz \
-    && rm /tmp/go.tar.gz
+RUN mkdir -p /home/codespace/.ssh \
+    && chmod 700 /home/codespace/.ssh \
+    && chown -R codespace:codespace /home/codespace/.ssh
 
-ENV HOME=/home/ubuntu
+# ever gets mounted over it - entrypoint.sh reseeds from this on first boot
+RUN cp -a /home/codespace /opt/skel-codespace
+
+RUN sed -i \
+    -e 's/#PermitRootLogin.*/PermitRootLogin no/' \
+    -e 's/#PasswordAuthentication.*/PasswordAuthentication no/' \
+    -e 's/#PubkeyAuthentication.*/PubkeyAuthentication yes/' \
+    -e 's/^Port .*/Port 22/' \
+    -e 's/#LogLevel.*/LogLevel VERBOSE/' \
+    /etc/ssh/sshd_config
+
+RUN sed -i 's#^PATH="#PATH="/home/codespace/nvm/current/bin:/usr/local/go/bin:#' /etc/environment
+
+ENV HOME=/home/codespace
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PYTHONUNBUFFERED=1 \
     GOPATH=$HOME/go \
@@ -54,7 +68,11 @@ RUN mkdir -p /opt/claude \
     && ln -s /opt/claude/.local/bin/claude /usr/local/bin/claude \
     && chmod -R a+rX /opt/claude
 
-WORKDIR /home/ubuntu
-USER ubuntu
+COPY docker/sshd.supervisor.conf /etc/supervisor/conf.d/sshd.conf
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
-CMD ["bash"]
+USER root
+EXPOSE 22
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/supervisord.conf"]

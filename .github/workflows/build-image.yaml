@@ -50,23 +50,22 @@ jobs:
             org.opencontainers.image.title=claude-code
             org.opencontainers.image.description=Claude Code CLI runtime image with core development tools
 
-      - name: Build and push multi-arch image
+      - name: Build and push image
         id: build
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             CLAUDE_CODE_VERSION=${{ steps.meta.outputs.version }}
 
-      - name: Verify published manifest contains amd64 and arm64
+      - name: Verify published manifest contains amd64
         run: |
           set -euo pipefail
           primary_tag="$(printf '%s\n' "${{ steps.meta.outputs.tags }}" | head -n 1)"
           docker buildx imagetools inspect "$primary_tag" > /tmp/imagetools.txt
           grep -q "linux/amd64" /tmp/imagetools.txt
-          grep -q "linux/arm64" /tmp/imagetools.txt
