@@ -50,7 +50,7 @@ jobs:
             org.opencontainers.image.title=claude-code
             org.opencontainers.image.description=Claude Code CLI runtime image with core development tools
 
-      - name: Build and push multi-arch image
+      - name: Build and push image
         id: build
         uses: docker/build-push-action@v6
         with:
