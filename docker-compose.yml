@@ -4,20 +4,16 @@ services:
     build: .
     platform: linux/amd64
     environment:
-      DOCKER_HOST: unix:///run/docker/docker.sock
-    volumes:
-      - docker-sock:/run/docker
+      DOCKER_HOST: tcp://dind:2375
     depends_on:
       - dind
 
   dind:
     image: docker:29-dind
     privileged: true
-    command: ["dockerd", "--host=unix:///run/docker/docker.sock"]
+    command: ["dockerd", "--host=tcp://0.0.0.0:2375", "--tls=false"]
     volumes:
-      - docker-sock:/run/docker
       - docker-lib:/var/lib/docker
 
 volumes:
-  docker-sock:
   docker-lib:

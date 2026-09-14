@@ -75,7 +75,7 @@ spec:
               value: {{ .Values.home | quote }}
             {{- if .Values.dockerInDocker.enabled }}
             - name: DOCKER_HOST
-              value: unix:///run/docker/docker.sock
+              value: tcp://localhost:2375
             {{- end }}
             {{- range $name, $value := .Values.env }}
             - name: {{ $name }}
@@ -106,23 +106,18 @@ spec:
               subPath: authorized_keys
               readOnly: true
             {{- end }}
-            {{- if .Values.dockerInDocker.enabled }}
-            - name: docker-sock
-              mountPath: /run/docker
-            {{- end }}
         {{- if .Values.dockerInDocker.enabled }}
         - name: dind
           image: "{{ .Values.dockerInDocker.image.repository }}:{{ .Values.dockerInDocker.image.tag }}"
           args:
             - dockerd
-            - --host=unix:///run/docker/docker.sock
+            - --host=tcp://0.0.0.0:2375
+            - --tls=false
           securityContext:
             privileged: true
           resources:
             {{- toYaml .Values.dockerInDocker.resources | nindent 12 }}
           volumeMounts:
-            - name: docker-sock
-              mountPath: /run/docker
             - name: docker-lib
               mountPath: /var/lib/docker
         {{- end }}
@@ -143,8 +138,6 @@ spec:
             defaultMode: 0444
         {{- end }}
         {{- if .Values.dockerInDocker.enabled }}
-        - name: docker-sock
-          emptyDir: {}
         - name: docker-lib
           emptyDir:
             sizeLimit: {{ .Values.dockerInDocker.storage.sizeLimit }}
