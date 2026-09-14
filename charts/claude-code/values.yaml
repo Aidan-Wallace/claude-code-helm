@@ -5,6 +5,10 @@ nameOverride: ""
 # -- Override the full name of the release
 fullnameOverride: ""
 
+# -- Override the pod's hostname (what `hostname` reports inside the
+# container, e.g. in the shell prompt). Defaults to the pod's generated name.
+hostnameOverride: ""
+
 # Image configuration
 image:
   # -- Container image repository. This image must already contain the `claude` binary.

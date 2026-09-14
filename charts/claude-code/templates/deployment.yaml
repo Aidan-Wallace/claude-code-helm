@@ -38,6 +38,9 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "claude-code.serviceAccountName" . }}
+      {{- with .Values.hostnameOverride }}
+      hostname: {{ . }}
+      {{- end }}
       securityContext:
         {{- if .Values.ssh.enabled }}
         seccompProfile:
