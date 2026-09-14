@@ -3,3 +3,21 @@ services:
     image: claude-code:latest
     build: .
     platform: linux/amd64
+    environment:
+      DOCKER_HOST: unix:///run/docker/docker.sock
+    volumes:
+      - docker-sock:/run/docker
+    depends_on:
+      - dind
+
+  dind:
+    image: docker:29-dind
+    privileged: true
+    command: ["dockerd", "--host=unix:///run/docker/docker.sock"]
+    volumes:
+      - docker-sock:/run/docker
+      - docker-lib:/var/lib/docker
+
+volumes:
+  docker-sock:
+  docker-lib:
