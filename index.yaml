@@ -3,6 +3,27 @@ entries:
   claude-code:
   - apiVersion: v2
     appVersion: 2.1.139
+    created: "2026-09-14T20:07:16.404942894Z"
+    description: A Helm chart for running Claude Code CLI in Kubernetes with persistent
+      HOME storage
+    digest: 7811c94211b674a634b5dd53b5c58068bf27fcdd9e9b6d05ae88f2384f8b9db6
+    home: https://github.com/anthropics/claude-code
+    keywords:
+    - claude
+    - anthropic
+    - ai
+    - cli
+    maintainers:
+    - name: Chris
+    name: claude-code
+    sources:
+    - https://github.com/anthropics/claude-code
+    type: application
+    urls:
+    - https://github.com/Aidan-Wallace/claude-code-helm/releases/download/claude-code-0.0.5/claude-code-0.0.5.tgz
+    version: 0.0.5
+  - apiVersion: v2
+    appVersion: 2.1.139
     created: "2026-09-14T19:54:34.223362062Z"
     description: A Helm chart for running Claude Code CLI in Kubernetes with persistent
       HOME storage
@@ -22,4 +43,4 @@ entries:
     urls:
     - https://github.com/Aidan-Wallace/claude-code-helm/releases/download/claude-code-0.0.4/claude-code-0.0.4.tgz
     version: 0.0.4
-generated: "2026-09-14T19:54:34.223374956Z"
+generated: "2026-09-14T20:07:16.404949454Z"
