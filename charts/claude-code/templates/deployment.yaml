@@ -139,7 +139,9 @@ spec:
         - name: ssh-keys
           secret:
             secretName: {{ include "claude-code.sshSecretName" . }}
-            defaultMode: 0400
+            # secret volumes mount as root; 0444 lets sshd read it after
+            # dropping privileges to the target user (0400 leaves it root-only)
+            defaultMode: 0444
         {{- end }}
         {{- if .Values.dockerInDocker.enabled }}
         - name: docker-sock
