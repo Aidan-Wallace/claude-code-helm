@@ -37,3 +37,10 @@ serviceAccount:
 
 podAnnotations:
   prometheus.io/scrape: "false"
+
+postInitScript: |
+  echo "post-init ran"
+
+secretMounts:
+  - secretName: example-secret
+    mountPath: /run/devserver-secrets/example

@@ -1,0 +1,25 @@
+{{- if .Values.postInitScript }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "claude-code.postInitName" . }}
+  labels:
+    {{- include "claude-code.labels" . | nindent 4 }}
+data:
+  post-init.sh: |
+    {{- .Values.postInitScript | nindent 4 }}
+  launcher.sh: |
+    #!/bin/sh
+    # Runs post-init.sh as the codespace user once HOME is ready.
+    if [ "$(id -u)" = 0 ]; then
+      # Root means ssh mode: entrypoint.sh seeds an empty HOME on first boot.
+      i=0
+      while [ ! -e "$HOME/.oh-my-zsh" ] && [ "$i" -lt 60 ]; do
+        sleep 1
+        i=$((i + 1))
+      done
+      exec runuser -u codespace -- "$0"
+    fi
+    bash -euo pipefail /opt/post-init/post-init.sh >"$HOME/.post-init.log" 2>&1
+    echo "$?" >"$HOME/.post-init.status"
+{{- end }}

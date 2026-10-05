@@ -89,3 +89,10 @@ Create the name of the secret to use for SSH authorized_keys
 {{- printf "%s-ssh-keys" (include "claude-code.fullname" .) }}
 {{- end }}
 {{- end }}
+
+{{/*
+Name of the post-init ConfigMap
+*/}}
+{{- define "claude-code.postInitName" -}}
+{{- printf "%s-post-init" (include "claude-code.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
