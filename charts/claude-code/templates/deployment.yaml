@@ -1,4 +1,5 @@
 {{- $hasManagedSecret := and (not .Values.credentials.existingSecret) (or .Values.credentials.anthropicApiKey (not (empty .Values.credentials.secretData))) -}}
+{{- $hasPostInit := not (empty .Values.postInitScript) -}}
 {{- $hasAnySecret := or .Values.credentials.existingSecret $hasManagedSecret -}}
 {{- if and .Values.ssh.enabled (not .Values.ssh.existingSecret) (not .Values.ssh.publicKeys) -}}
 {{- fail "ssh.enabled requires ssh.publicKeys or ssh.existingSecret" -}}
@@ -18,10 +19,13 @@ spec:
       {{- include "claude-code.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- if or $hasManagedSecret .Values.podAnnotations }}
+      {{- if or $hasManagedSecret $hasPostInit .Values.podAnnotations }}
       annotations:
         {{- if $hasManagedSecret }}
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- if $hasPostInit }}
+        checksum/post-init: {{ include (print $.Template.BasePath "/post-init-configmap.yaml") . | sha256sum }}
         {{- end }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
@@ -45,6 +49,11 @@ spec:
         {{- if .Values.ssh.enabled }}
         seccompProfile:
           type: RuntimeDefault
+        {{- if .Values.secretMounts }}
+        # secret files are root-owned; fsGroup makes them group-readable (0440)
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        {{- end }}
         {{- else }}
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
         {{- end }}
@@ -54,6 +63,24 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           stdin: {{ .Values.stdin }}
           tty: {{ .Values.tty }}
+          {{- if $hasPostInit }}
+          command:
+            - /bin/sh
+            - -c
+            - '/opt/post-init/launcher.sh & exec "$@"'
+            - sh
+            {{- if .Values.ssh.enabled }}
+            - /usr/local/bin/entrypoint.sh
+            {{- else }}
+            {{- toYaml .Values.command | nindent 12 }}
+            {{- end }}
+          {{- if .Values.extraArgs }}
+          args:
+            {{- toYaml .Values.extraArgs | nindent 12 }}
+          {{- else if .Values.ssh.enabled }}
+          args: [/usr/bin/supervisord, -n, -c, /etc/supervisor/supervisord.conf]
+          {{- end }}
+          {{- else }}
           {{- if not .Values.ssh.enabled }}
           {{- with .Values.command }}
           command:
@@ -63,6 +90,7 @@ spec:
           {{- with .Values.extraArgs }}
           args:
             {{- toYaml . | nindent 12 }}
+          {{- end }}
           {{- end }}
           {{- if .Values.ssh.enabled }}
           ports:
@@ -106,6 +134,19 @@ spec:
               subPath: authorized_keys
               readOnly: true
             {{- end }}
+            {{- if $hasPostInit }}
+            - name: post-init
+              mountPath: /opt/post-init
+              readOnly: true
+            {{- end }}
+            {{- range $i, $m := .Values.secretMounts }}
+            - name: secret-mount-{{ $i }}
+              mountPath: {{ required "secretMounts[].mountPath is required" $m.mountPath | quote }}
+              readOnly: true
+              {{- with $m.subPath }}
+              subPath: {{ . | quote }}
+              {{- end }}
+            {{- end }}
         {{- if .Values.dockerInDocker.enabled }}
         - name: dind
           image: "{{ .Values.dockerInDocker.image.repository }}:{{ .Values.dockerInDocker.image.tag }}"
@@ -136,6 +177,22 @@ spec:
             # secret volumes mount as root; 0444 lets sshd read it after
             # dropping privileges to the target user (0400 leaves it root-only)
             defaultMode: 0444
+        {{- end }}
+        {{- if $hasPostInit }}
+        - name: post-init
+          configMap:
+            name: {{ include "claude-code.postInitName" . }}
+            defaultMode: 0555
+        {{- end }}
+        {{- range $i, $m := .Values.secretMounts }}
+        - name: secret-mount-{{ $i }}
+          secret:
+            secretName: {{ required "secretMounts[].secretName is required" $m.secretName }}
+            defaultMode: {{ $m.mode | default 0440 | int }}
+            {{- with $m.items }}
+            items:
+              {{- toYaml . | nindent 14 }}
+            {{- end }}
         {{- end }}
         {{- if .Values.dockerInDocker.enabled }}
         - name: docker-lib

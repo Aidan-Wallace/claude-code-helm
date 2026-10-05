@@ -108,6 +108,34 @@ credentials:
   # secretData:
   #   ANTHROPIC_BASE_URL: "https://your-endpoint.example"
 
+# Script run in the background after the container starts (every boot, so it
+# must be idempotent). Runs as the codespace user via bash with `-euo pipefail`;
+# output goes to ~/.post-init.log and the exit code to ~/.post-init.status.
+# When ssh.enabled, it starts after the entrypoint has seeded an empty HOME.
+# -- Bash script to run after boot (e.g. install extra tools, wire up secrets)
+postInitScript: ""
+# Example:
+# postInitScript: |
+#   mkdir -p ~/.local/bin
+#   command -v ripgrep >/dev/null || sudo apt-get install -y ripgrep
+#   ln -sfn /run/devserver-secrets/github/id_ed25519 ~/.ssh/id_ed25519
+
+# -- Mount Secrets (typically created by an externalSecrets item, so the values
+# come from the secret manager and never live in git) as read-only files.
+# Each entry: secretName (required), mountPath (required), mode (default 0440),
+# items (optional list of {key, path} to mount a subset), subPath (optional,
+# mount a single key as a file; such mounts do not pick up rotations).
+# NOTE: this controls where secrets appear, it is not an isolation boundary:
+# every process running as the codespace user can read them. Use a separate
+# release per trust boundary if you need real isolation.
+secretMounts: []
+# Example:
+# secretMounts:
+#   - secretName: github-deploy-key
+#     mountPath: /run/devserver-secrets/github
+#   - secretName: project-foo-env
+#     mountPath: /home/codespace/code/foo/.secrets
+
 # Persistence configuration for HOME
 persistence:
   # -- Enable persistent storage for the home directory (see `home`)

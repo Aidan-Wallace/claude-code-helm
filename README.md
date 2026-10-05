@@ -127,6 +127,49 @@ The sidecar runs `privileged: true`, which is required for nested Docker but is 
 
 ---
 
+## Post-Init Script
+
+`postInitScript` is a bash script run in the background every time the container starts (as the `codespace` user, `set -euo pipefail`). Use it to install extra tools or wire up config. It must be idempotent. Output goes to `~/.post-init.log` and the exit code to `~/.post-init.status`. With `ssh.enabled`, it waits for the entrypoint to seed an empty HOME first. `sudo` is available in the image.
+
+```yaml
+postInitScript: |
+  command -v fd >/dev/null || sudo apt-get install -y fd-find
+  git config --global user.name "me"
+```
+
+Editing the script rolls the pod.
+
+---
+
+## Secrets From a Secret Manager
+
+Keep secrets out of values and images: create them with an `externalSecrets.items` entry (e.g. Bitwarden Secrets Manager), then mount the resulting Secret read-only with `secretMounts`:
+
+```yaml
+externalSecrets:
+  enabled: true
+  items:
+    - fullnameOverride: github-deploy-key
+      spec:
+        secretStoreRef: {name: bitwarden-secretsmanager, kind: ClusterSecretStore}
+        data:
+          - secretKey: id_ed25519
+            remoteRef: {key: devservers__github-deploy-key}
+secretMounts:
+  - secretName: github-deploy-key
+    mountPath: /run/devserver-secrets/github   # whole volume: rotations propagate
+  - secretName: project-foo-env
+    mountPath: /home/codespace/code/foo/.env
+    subPath: .env                              # single file (no live rotation)
+    mode: 0400
+```
+
+Files default to mode `0440` and are group-readable via `fsGroup: 1000` (added automatically in ssh mode when `secretMounts` is set). Load them per directory yourself, e.g. a `postInitScript` that appends a shell hook or `.envrc` for the directories you care about.
+
+> **Not an isolation boundary.** Mounting only controls *where* secrets appear. Every process running as `codespace` (including Claude) can read all of them. For real isolation, run a separate release per trust boundary.
+
+---
+
 ## Additional Manifests
 
 `additionalManifests` takes a list of complete Kubernetes manifests to create alongside the release — useful for things this chart doesn't model directly (an `IngressRouteTCP`, a `NetworkPolicy`, an extra `ConfigMap`, etc). Each entry is rendered through `tpl`, so it can reference chart values and helpers:
@@ -181,6 +224,8 @@ For reproducibility, Helm defaults should point to explicit version tags rather 
 | `ssh.publicKeys`              | Authorized keys                            | `[]`                                |
 | `service.type`                | Service type for SSH                       | `LoadBalancer`                      |
 | `dockerInDocker.enabled`      | Run an isolated dockerd sidecar            | `false`                             |
+| `postInitScript`              | Bash run after boot (idempotent)           | `""`                                |
+| `secretMounts`                | Mount Secrets as read-only files           | `[]`                                |
 
 See [`charts/claude-code/values.yaml`](charts/claude-code/values.yaml) for the full configuration.
 
