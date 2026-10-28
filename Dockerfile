@@ -1,4 +1,4 @@
-ARG CONTAINER_VARIANT=6.1.7-noble
+ARG CONTAINER_VARIANT=6.1.12-noble
 ARG CLAUDE_CODE_VERSION=latest
 
 FROM mcr.microsoft.com/devcontainers/universal:${CONTAINER_VARIANT}
